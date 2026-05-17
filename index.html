@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Skye — Weather</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --sky-top: #0a1628;
+      --sky-mid: #0d2b5e;
+      --sky-low: #1a4a8a;
+      --accent: #f0b429;
+      --mist: rgba(255,255,255,0.06);
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: linear-gradient(165deg, var(--sky-top) 0%, var(--sky-mid) 45%, var(--sky-low) 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    .display-font { font-family: 'Playfair Display', serif; }
+    .stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+    .star { position: absolute; border-radius: 50%; background: white; animation: twinkle var(--dur, 3s) ease-in-out infinite var(--delay, 0s); }
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.1; transform: scale(1); }
+      50% { opacity: 0.9; transform: scale(1.3); }
+    }
+    .moon-glow { position: fixed; top: -80px; right: -80px; width: 320px; height: 320px; border-radius: 50%; background: radial-gradient(circle, rgba(240,180,41,0.18) 0%, transparent 70%); pointer-events: none; z-index: 0; }
+    .glass { background: rgba(255,255,255,0.07); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,0.12); border-radius: 24px; }
+    .glass-light { background: rgba(255,255,255,0.12); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.18); border-radius: 16px; }
+    .main-card { position: relative; }
+    .main-card::before { content: ''; position: absolute; inset: -1px; border-radius: 28px; padding: 1px; background: linear-gradient(135deg, rgba(240,180,41,0.5), rgba(255,255,255,0.1), rgba(100,160,255,0.4)); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
+    .temp-display { font-family: 'Playfair Display', serif; font-size: clamp(5rem, 18vw, 9rem); font-weight: 700; line-height: 1; letter-spacing: -3px; background: linear-gradient(135deg, #fff 30%, rgba(240,180,41,0.8) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .degree-sup { font-family: 'Playfair Display', serif; font-size: clamp(1.5rem, 5vw, 3rem); vertical-align: super; background: linear-gradient(135deg, #fff 30%, rgba(240,180,41,0.8) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .forecast-item { transition: transform 0.2s ease, background 0.2s ease; cursor: default; }
+    .forecast-item:hover { transform: translateY(-4px); background: rgba(255,255,255,0.16) !important; }
+    .detail-chip { transition: transform 0.2s ease; }
+    .detail-chip:hover { transform: scale(1.03); }
+    .shimmer-line { height: 2px; background: linear-gradient(90deg, transparent, var(--accent), transparent); background-size: 200% 100%; animation: shimmer 2.5s ease-in-out infinite; }
+    @keyframes shimmer { 0% { background-position: -100% 0; } 100% { background-position: 200% 0; } }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+    .progress-track { background: rgba(255,255,255,0.12); border-radius: 999px; height: 6px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #f0b429, #ffe082); }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-up { animation: fadeUp 0.6s ease forwards; }
+    .delay-1 { animation-delay: 0.1s; opacity: 0; }
+    .delay-2 { animation-delay: 0.2s; opacity: 0; }
+    .delay-3 { animation-delay: 0.3s; opacity: 0; }
+    .delay-4 { animation-delay: 0.4s; opacity: 0; }
+    .delay-5 { animation-delay: 0.5s; opacity: 0; }
+
+    /* Search bar */
+    .search-wrap { position: relative; flex: 1; }
+    .search-wrap input {
+      width: 100%;
+      background: rgba(255,255,255,0.10);
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 999px;
+      padding: 8px 20px 8px 40px;
+      color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      outline: none;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .search-wrap input::placeholder { color: rgba(255,255,255,0.35); }
+    .search-wrap input:focus { background: rgba(255,255,255,0.16); border-color: rgba(240,180,41,0.5); }
+    .search-wrap .search-icon {
+      position: absolute;
+      left: 13px;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body class="text-white relative">
+
+  <div class="stars">
+    <span class="star" style="width:2px;height:2px;top:8%;left:12%;--dur:2.8s;--delay:0s;"></span>
+    <span class="star" style="width:1px;height:1px;top:15%;left:34%;--dur:3.5s;--delay:0.5s;"></span>
+    <span class="star" style="width:3px;height:3px;top:5%;left:55%;--dur:2.2s;--delay:1s;"></span>
+    <span class="star" style="width:2px;height:2px;top:22%;left:78%;--dur:4s;--delay:0.3s;"></span>
+    <span class="star" style="width:1px;height:1px;top:40%;left:90%;--dur:3.1s;--delay:1.2s;"></span>
+    <span class="star" style="width:2px;height:2px;top:60%;left:5%;--dur:2.5s;--delay:0.8s;"></span>
+    <span class="star" style="width:1px;height:1px;top:70%;left:20%;--dur:3.8s;--delay:0s;"></span>
+    <span class="star" style="width:3px;height:3px;top:3%;left:80%;--dur:2.9s;--delay:0.6s;"></span>
+    <span class="star" style="width:2px;height:2px;top:30%;left:45%;--dur:3.3s;--delay:1.5s;"></span>
+    <span class="star" style="width:1px;height:1px;top:55%;left:65%;--dur:2.7s;--delay:0.2s;"></span>
+    <span class="star" style="width:2px;height:2px;top:80%;left:50%;--dur:3.6s;--delay:0.9s;"></span>
+    <span class="star" style="width:1px;height:1px;top:18%;left:92%;--dur:4.2s;--delay:1.1s;"></span>
+    <span class="star" style="width:3px;height:3px;top:88%;left:30%;--dur:2.4s;--delay:0.4s;"></span>
+    <span class="star" style="width:1px;height:1px;top:45%;left:15%;--dur:3.9s;--delay:1.3s;"></span>
+    <span class="star" style="width:2px;height:2px;top:75%;left:75%;--dur:2.6s;--delay:0.7s;"></span>
+  </div>
+
+  <div class="moon-glow"></div>
+
+  <div class="relative z-10 min-h-screen flex flex-col items-center justify-start p-4 sm:p-6 lg:p-8 py-8 max-w-5xl mx-auto w-full">
+
+    <!-- TOP BAR -->
+    <div class="fade-up delay-1 w-full mb-6">
+
+      <!-- Large screen: single row -->
+      <div class="hidden sm:flex items-center gap-4 w-full">
+        <!-- Location -->
+        <div class="flex items-center gap-2 shrink-0">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="text-yellow-300 opacity-80">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+            <circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/>
+          </svg>
+          <span class="location text-sm font-medium tracking-wide text-white/80">Jos, Plateau State</span>
+        </div>
+        <!-- Search bar — stretches to fill remaining space -->
+        <div class="search-wrap">
+          <svg class="search-icon" width="15" height="15" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input class="search-city" type="text" placeholder="Search city…" autocomplete="off" autofocus />
+        </div>
+        
+        <!-- Date + unit toggle -->
+
+        <div class="flex items-center gap-3 shrink-0">
+          <span class="date text-xm font-semibold text-white tracking-widest uppercase">Sat, 17 May</span>
+        </div>
+      </div>
+
+      <!-- Small screen: stacked, centred -->
+      <div class="flex sm:hidden flex-col items-center gap-3 w-full">
+        <!-- Location -->
+        <div class="flex items-center gap-2">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="text-yellow-300 opacity-80">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+            <circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/>
+          </svg>
+          <span class="location text-sm font-medium tracking-wide text-white/80">Jos, Plateau State</span>
+        </div>
+        <!-- Search bar — full width -->
+        <div class="search-wrap w-full">
+          <svg class="search-icon" width="15" height="15" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input class="search-city" type="text" placeholder="Search city…" autocomplete="off" autofocus />
+        </div>
+        <!-- Date + unit toggle -->
+        <div class="flex items-center gap-3">
+          <span class="date text-xm text-white/50 tracking-widest uppercase">Sat, 17 May</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Main hero card -->
+    <div class="main-card glass w-full p-6 sm:p-8 mb-4 fade-up delay-2" style="border-radius:28px;">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+        <div class="flex flex-col">
+          <div class="flex items-start">
+            <span class="temp-display">23</span>
+            <span class="degree-sup mt-4 ml-1">°C</span>
+          </div>
+          <div class="shimmer-line w-24 mb-3 mt-1"></div>
+          <p class="condition-txt display-font text-xl sm:text-2xl text-white/90 mb-1"></p>
+          <p class="text-white/50 text-sm font-light">Fahrenheit <span class="fahrenheit text-white/80 font-medium">20°F
+          <!-- </span> · Mild breeze</p> -->
+        </div>
+        <div class="flex flex-col items-center sm:items-end gap-2">
+          <img src="" alt="" class="img" alt="">
+          
+          <p class="updated text-white/40 text-xs tracking-widest uppercase">Updated 2 min ago</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-3 gap-3 mt-6">
+        <div class="glass-light p-3 flex flex-col items-center gap-1 detail-chip">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="text-blue-300"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+          <span class="humidity text-white text-sm font-semibold">62%</span>
+          <span class="text-white/40 text-xs">Humidity</span>
+        </div>
+        <div class="glass-light p-3 flex flex-col items-center gap-1 detail-chip">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="text-cyan-300"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg>
+          <span class="wind text-white text-sm font-semibold">14 km/h</span>
+          <span class="text-white/40 text-xs">Wind</span>
+        </div>
+        <div class="glass-light p-3 flex flex-col items-center gap-1 detail-chip">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="text-yellow-300"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+          <span class="uv text-white text-sm font-semibold">5</span>
+          <span class="text-white/40 text-xs">UV</span>
+        </div>
+      </div>
+    </div>
+
+        <!-- Location & Metadata -->
+    <div class="glass w-full p-5 sm:p-6 fade-up delay-5 mb-4">
+      <p class="text-xs tracking-widest uppercase text-white/40 font-medium mb-5">Location &amp; Metadata</p>
+
+      <!-- Primary info grid -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-5">
+        <div class="flex flex-col gap-1">
+          <span class="text-white/30 text-xs uppercase tracking-wider">City / Region</span>
+          <span class="city-region text-white text-sm font-medium">Lagos, Lagos State</span>
+        </div>
+        <div class="flex flex-col gap-1">
+          <span class="text-white/30 text-xs uppercase tracking-wider">Country</span>
+          <span class="country text-white text-sm font-medium">Nigeria 🇳🇬</span>
+        </div>
+        <div class="flex flex-col gap-1">
+          <span class="text-white/30 text-xs uppercase tracking-wider">Coordinates</span>
+          <span class="latitude text-white text-sm flex-col font-medium">6.4531°N</span>
+          <span class="longitude text-white text-sm font-medium">3.3958°E</span>
+        </div>
+        <div class="flex flex-col gap-1">
+          <span class="text-white/30 text-xs uppercase tracking-wider">Timezone</span>
+          <span class="timezone text-white text-sm font-medium">Africa/Lagos · UTC+1</span>
+        </div>
+        <div class="flex flex-col gap-1">
+          <span class="text-white/30 text-xs uppercase tracking-wider">Local Date/Time</span>
+          <span class="local-time-date text-white text-sm font-medium">08:51 · ☀️ Daytime</span>
+        </div>
+        <div class="flex flex-col gap-1">
+          <span class="text-white/30 text-xs uppercase tracking-wider">Epoch</span>
+          <span class="epoch text-white text-sm font-medium font-mono">1778917885</span>
+        </div>
+      </div>
+
+      <div class="shimmer-line w-full mb-5"></div>
+
+      <!-- Metadata chips grid -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+
+        <div class="glass-light p-3 flex flex-col gap-1 detail-chip">
+          <span class="text-white/30 text-xs">chance_of_snow / will_it_snow</span>
+          <span class="chance-snow text-white text-sm font-medium">0% · No snow</span>
+        </div>
+
+        <div class="glass-light p-3 flex flex-col gap-1 detail-chip">
+          <span class="text-white/30 text-xs">precip_mm / precip_in</span>
+          <span class="precipitation text-white text-sm font-medium">0 mm / 0 in</span>
+        </div>
+
+        <div class="glass-light p-3 flex flex-col gap-1 detail-chip">
+          <span class="text-white/30 text-xs">pressure_mb / pressure_in</span>
+          <span class="pressure text-white text-sm font-medium">1012 mb / 29.88 in</span>
+        </div>
+
+        <div class="glass-light p-3 flex flex-col gap-1 detail-chip">
+          <span class="text-white/30 text-xs">condition.code / text</span>
+          <span class="condition-code text-white text-sm font-medium">1006 · Cloudy</span>
+        </div>
+
+        <div class="glass-light p-3 flex flex-col gap-1 detail-chip">
+          <span class="text-white/30 text-xs">last_updated_epoch</span>
+          <span class="last-updated-epoch text-white text-sm font-medium font-mono">1778917500</span>
+        </div>
+
+        <div class="glass-light p-3 flex flex-col gap-1 detail-chip">
+          <span class="text-white/30 text-xs">is_day</span>
+          <span class="day-night text-white text-sm font-medium">Daytime ☀️</span>
+        </div>
+
+        <div class="glass-light p-3 flex flex-col gap-1 detail-chip">
+          <span class="text-white/30 text-xs">chance_of_rain / will_it_rain</span>
+          <span class="chance-rain text-white text-sm font-medium">0% · Won't rain</span>
+        </div>
+
+        <div class="glass-light p-3 flex flex-col gap-1 detail-chip">
+          <span class="text-white/30 text-xs">vis_km / vis_miles</span>
+          <span class="vis text-white text-sm font-medium">10 km / 6 mi</span>
+        </div>
+
+      </div>
+    </div>
+
+
+    <!-- Two col: details + sun arc -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full mb-4 fade-up delay-3">
+      <div class="glass p-5 flex flex-col gap-4">
+        <p class="text-xs tracking-widest uppercase text-white/40 font-medium">Conditions</p>
+        <div class="flex flex-col gap-3">
+          <div>
+            <div class="flex justify-between text-sm mb-1"><span class="text-white/60">Humidity</span><span class="humidity-condition text-white font-medium">62%</span></div>
+            <!-- <div class="progress-track"><div class="progress-fill" style="width:62%"></div></div> -->
+          </div>
+          <div>
+            <div class="flex justify-between text-sm mb-1"><span class="text-white/60">Wind Direction</span><span class="wind-direction text-white font-medium">5 / 11</span></div>
+            <!-- <div class="progress-track"><div class="progress-fill" style="width:45%"></div></div> -->
+          </div>
+          <div>
+            <div class="flex justify-between text-sm mb-1"><span class="text-white/60">Cloud</span><span class="cloud text-white font-medium">38%</span></div>
+            <!-- <div class="progress-track"><div class="progress-fill" style="width:38%"></div></div> -->
+          </div>
+        </div>
+        <div class="shimmer-line w-full mt-1"></div>
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          <div class="flex flex-col gap-0.5"><span class="text-white/40 text-xs">Visibility</span><span class="visibility text-white font-medium">9.2 km</span></div>
+          <div class="flex flex-col gap-0.5"><span class="text-white/40 text-xs">Dew Point</span><span class="dew-point text-white font-medium">16°C</span></div>
+          <div class="flex flex-col gap-0.5"><span class="text-white/40 text-xs">Feels like</span><span class="feels-like text-white font-medium">1012 hPa</span></div>
+          <div class="flex flex-col gap-0.5"><span class="text-white/40 text-xs">Short Radiation</span><span class="short-radiation text-white font-medium">0 mm</span></div>
+        </div>
+      </div>
+      <div class="glass p-5 flex flex-col gap-4">
+        <p class="text-xs tracking-widest uppercase text-white/40 font-medium">Daylight</p>
+        <div class="grid grid-cols-3 gap-2 text-center text-sm">
+          <div class="flex flex-col gap-0.5">
+            <!-- <span class="text-yellow-300 text-xs">🌅 Sunrise</span> -->
+            <span class="rain-text text-white font-semibold">06:12</span>
+          </div>
+
+          <img src="" alt="" class="icon-cond">
+          
+          <div class="flex flex-col gap-0.5">
+            <!-- <span class="text-yellow-300 text-xs">🌅 Sunrise</span> -->
+            <span class="epoch-cond text-white font-semibold">06:12</span>
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-3 gap-2 text-center text-sm">
+          <div class="flex flex-col gap-0.5">
+            <span class="text-yellow-300 text-xs">🌅 Sunrise</span>
+            <span class="sunrise text-white font-semibold">06:12</span>
+          </div>
+
+          <div class="flex flex-col gap-0.5">
+            <span class="text-orange-300 text-xs">🌇 Sunset</span>
+            <span class="sunset text-white font-semibold">18:44</span>
+          </div>
+
+          <div class="flex flex-col gap-0.5">
+            <span class="text-white/80 text-xs">🌙 Moonrise</span>
+            <span class="moonrise text-white font-semibold">12h 32m</span>
+          </div>
+
+          <div class="flex flex-col gap-0.5">
+            <span class="text-white/80 text-xs">🌘Moonset</span>
+            <span class="moonset text-white font-semibold">12h 32m</span>
+          </div>
+
+          <div class="flex flex-col gap-0.5">
+            <span class="text-white/80 text-xs">Is Moon Up</span>
+            <span class="is-moon-up text-white font-semibold">12h 32m</span>
+          </div>
+
+                    <div class="flex flex-col gap-0.5">
+            <span class="text-white/80 text-xs">Is Sun Up</span>
+            <span class="is-sun-up text-white font-semibold">12h 32m</span>
+          </div>
+        </div>
+
+        <div class="shimmer-line w-full"></div>
+        <div class="flex justify-between text-sm">
+          <div class="flex flex-col gap-0.5"><span class="text-white/40 text-xs">Moon Illumination</span><span class="moon-illumination text-white font-medium">20:31 %</span></div>
+          <div class="flex flex-col gap-0.5 items-end"><span class="text-white/40 text-xs">Moon Phase</span><span class="moon-phase text-white font-medium">🌔 Waxing Gibbous</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hourly forecast -->
+    <div class="glass w-full p-5 mb-4 fade-up delay-4">
+      <p class="text-xs tracking-widest uppercase text-white/40 font-medium mb-4">Hourly Forecast</p>
+      <div class="hourly-forecast-display flex gap-3 overflow-x-auto pb-1" style="scrollbar-width:thin;">
+
+        <!-- <div class="glass-light forecast-item p-3 px-10 flex flex-col items-center gap-2 min-w-[72px]">
+          <span class="text-xs text-white/40">Now</span>
+          <span class="text-xl"><img src="" alt=""></span>
+          <span class="text-white text-sm font-semibold">23°</span>
+        </div> -->
+
+      </div>
+    </div>
+
+
+    <p class="text-white/20 text-xs mt-6 tracking-widest">SKYE WEATHER · DATA UPDATED 13:48</p>
+  </div>
+
+  <script src="env.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
