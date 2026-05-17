@@ -14,5 +14,13 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {},
-  "description": ""
+  "description": "A simple and responsive weather application that provides real-time weather data forecasts using the WeatherAPI. It displays current conditions such as temperature, humidity, wind speed, visibility, UV index, and detailed hourly forecasts with a clean and modern UI.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/johndakshak/skye-weather.git"
+  },
+  "bugs": {
+    "url": "https://github.com/johndakshak/skye-weather/issues"
+  },
+  "homepage": "https://github.com/johndakshak/skye-weather#readme"
 }
