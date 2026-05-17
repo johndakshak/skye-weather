@@ -310,7 +310,9 @@
             <span class="rain-text text-white font-semibold">06:12</span>
           </div>
 
-          <img src="" alt="" class="icon-cond">
+          <div class="flex items-center justify-center">
+            <img src="" alt="" class="icon-cond" style="width: clamp(40px, 8vw, 64px); height: auto; display: block;">
+          </div>
           
           <div class="flex flex-col gap-0.5">
             <!-- <span class="text-yellow-300 text-xs">🌅 Sunrise</span> -->
@@ -344,7 +346,7 @@
             <span class="is-moon-up text-white font-semibold">12h 32m</span>
           </div>
 
-                    <div class="flex flex-col gap-0.5">
+          <div class="flex flex-col gap-0.5">
             <span class="text-white/80 text-xs">Is Sun Up</span>
             <span class="is-sun-up text-white font-semibold">12h 32m</span>
           </div>
@@ -362,18 +364,10 @@
     <div class="glass w-full p-5 mb-4 fade-up delay-4">
       <p class="text-xs tracking-widest uppercase text-white/40 font-medium mb-4">Hourly Forecast</p>
       <div class="hourly-forecast-display flex gap-3 overflow-x-auto pb-1" style="scrollbar-width:thin;">
-
-        <!-- <div class="glass-light forecast-item p-3 px-10 flex flex-col items-center gap-2 min-w-[72px]">
-          <span class="text-xs text-white/40">Now</span>
-          <span class="text-xl"><img src="" alt=""></span>
-          <span class="text-white text-sm font-semibold">23°</span>
-        </div> -->
-
       </div>
     </div>
 
-
-    <p class="text-white/20 text-xs mt-6 tracking-widest">SKYE WEATHER · DATA UPDATED 13:48</p>
+    <p class="skye-weather-updated text-white/80 text-xs mt-6 tracking-widest"></p>
   </div>
 
   <script src="env.js"></script>

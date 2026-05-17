@@ -1,12 +1,7 @@
 let searchCity = document.querySelectorAll('.search-city');
 let APIKey = getAPIkey();
 
-searchCity.forEach((input) => {
-    input.addEventListener('keydown', (e) => {
-
-        if (e.key === "Enter"){
-
-            let city = input.value.trim();
+function fetchWeather(city){
             let URL = `https://api.weatherapi.com/v1/forecast.json?key=${APIKey}&q=${city}`;
             
             fetch(URL, {
@@ -30,12 +25,26 @@ searchCity.forEach((input) => {
                     updateConditions(data);
                     dayLight(data);
                     updateHourlyForecast(data);
+                    updateBottomSection(data);
                 }
             })
+}
+
+searchCity.forEach((input) => {
+    input.addEventListener('keydown', (e) => {
+
+        if (e.key === "Enter"){
+
+            let city = input.value.trim();
+            fetchWeather(city)
         }
     });
 });
 
+// DEFAULT CITY
+fetchWeather('Abuja');
+
+// UPDATE LOCATION
 function updateLocation(data){
     let cityLocation = document.querySelectorAll('.location');
 
@@ -49,6 +58,7 @@ function updateLocation(data){
     });
 }
 
+// PDATE DATE/TIME
 function updateDateTime(data){
     let localDateTime = document.querySelectorAll('.date');
     localDateTime.forEach((date) => {
@@ -56,6 +66,7 @@ function updateDateTime(data){
     }); 
 }
 
+// UPDATE CURRENT WEATHER
 function updateCurrentWeather(data){
     document.querySelector('.temp-display').textContent = `${data.current.temp_c}`;
     document.querySelector('.condition-txt').textContent = `${data.current.condition.text}`;
@@ -68,6 +79,7 @@ function updateCurrentWeather(data){
     document.querySelector('.uv').textContent = `${data.current.uv}`;
 }
 
+// UPDATE METADATA
 function updateMetaData(data){
     document.querySelector('.city-region').textContent = `${data.location.name}, ${data.location.region}`;
     document.querySelector('.country').textContent = `${data.location.country}`;
@@ -179,6 +191,11 @@ function updateHourlyForecast(data){
             </div>
         `
     });
+}
+
+// UPDATE BOTTOM SECTION
+function updateBottomSection(data){
+    document.querySelector('.skye-weather-updated').textContent = `SKYE WEATHER · DATA UPDATED ${data.current.last_updated}`
 }
 
 
