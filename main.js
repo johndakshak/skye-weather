@@ -1,5 +1,6 @@
 let searchCity = document.querySelectorAll('.search-city');
-let APIKey = getAPIkey();
+
+let APIKey = '0d199ff1050242e4a2a191218261505';
 
 function fetchWeather(city){
             let URL = `https://api.weatherapi.com/v1/forecast.json?key=${APIKey}&q=${city}`;
@@ -179,6 +180,8 @@ function updateHourlyForecast(data){
     let hourlyForecast = data.forecast.forecastday[0].hour;
     let hourlyForecastDisplay = document.querySelector('.hourly-forecast-display');
     
+    hourlyForecastDisplay.innerHTML = '';
+
     hourlyForecast.forEach((hour) => {
         hourlyForecastDisplay.innerHTML += `
             <div class="glass-light forecast-item py-3 px-12 flex flex-col items-center gap-2 min-w-[72px]">
